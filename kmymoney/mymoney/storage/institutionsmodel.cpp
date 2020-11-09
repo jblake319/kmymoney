@@ -71,8 +71,6 @@ struct InstitutionsModel::Private
     for (int row = 0; row < rows; ++row) {
       const auto subIdx(q->index(row, 0, idx));
       value += subIdx.data(eMyMoney::Model::AccountValueRole).value<MyMoneyMoney>();
-
-
     }
     return value;
   }
@@ -100,7 +98,7 @@ InstitutionsModel::~InstitutionsModel()
 int InstitutionsModel::columnCount(const QModelIndex& parent) const
 {
   Q_UNUSED(parent);
-  return Column::MaxColumns;
+  return AccountsModel::Column::MaxColumns;
 }
 
 QVariant InstitutionsModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -131,7 +129,7 @@ QVariant InstitutionsModel::data(const QModelIndex& idx, int role) const
     case Qt::DisplayRole:
     case Qt::EditRole:
       switch(idx.column()) {
-        case Column::AccountName:
+        case AccountsModel::Column::AccountName:
           // make sure to never return any displayable text for the dummy entry
           return institution.name();
 
@@ -140,6 +138,12 @@ QVariant InstitutionsModel::data(const QModelIndex& idx, int role) const
             const auto baseCurrency = MyMoneyFile::instance()->baseCurrency();
             return d->institutionValue(idx).formatMoney(baseCurrency.tradingSymbol(), MyMoneyMoney::denomToPrec(baseCurrency.smallestAccountFraction()));
           }
+
+        case AccountsModel::Column::BankCode:
+          return institution.bankcode();
+
+        case AccountsModel::Column::Bic:
+          return institution.value("bic");
 
         default:
           return QString();
@@ -179,8 +183,8 @@ QVariant InstitutionsModel::data(const QModelIndex& idx, int role) const
     case eMyMoney::Model::Roles::IdRole:
       return institution.id();
 
-    case eMyMoney::Model::InstitutionSortCodeRole:
-      return institution.sortcode();
+    case eMyMoney::Model::InstitutionBankCodeRole:
+      return institution.bankcode();
 
     case eMyMoney::Model::AccountDisplayOrderRole:
       // make sure the no bank assigned accounts show up at the top
@@ -225,7 +229,7 @@ void InstitutionsModel::load(const QMap<QString, MyMoneyInstitution>& list)
   noBank.setName(i18n("Accounts with no institution assigned"));
   static_cast<TreeItem<MyMoneyInstitution>*>(index(0, 0).internalPointer())->dataRef() = noBank;
   ++row;
-  for(const auto institution : list) {
+  for(const auto& institution : list) {
     const auto idx = index(row, 0);
     static_cast<TreeItem<MyMoneyInstitution>*>(idx.internalPointer())->dataRef() = institution;
     d->loadAccounts(idx, institution.accountList());
@@ -261,5 +265,20 @@ void InstitutionsModel::addAccount(const QString& institutionId, const QString& 
     MyMoneyInstitution account(accountId, MyMoneyInstitution());
     static_cast<TreeItem<MyMoneyInstitution>*>(subIdx.internalPointer())->dataRef() = account;
     emit dataChanged(subIdx, subIdx);
+  }
+}
+
+void InstitutionsModel::removeAccount(const QString& institutionId, const QString& accountId)
+{
+  auto idx = indexById(institutionId);
+  if (idx.isValid()) {
+    const auto rows = rowCount(idx);
+    for (int row = 0; row < rows; ++row) {
+      const auto subIdx = index(row, 0, idx);
+      if (subIdx.data(eMyMoney::Model::IdRole).toString() == accountId) {
+        removeRows(row, 1, idx);
+        break;
+      }
+    }
   }
 }

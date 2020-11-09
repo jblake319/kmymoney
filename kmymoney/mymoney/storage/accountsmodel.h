@@ -45,6 +45,7 @@ public:
   enum Column {
     AccountName = 0,
     Type,
+    HasOnlineMapping,
     Tax,
     Vat,
     CostCenter,
@@ -52,8 +53,10 @@ public:
     PostedValue,
     TotalPostedValue,
     Number,
-    SortCode,
+    BankCode,
     Balance,
+    Bic,
+    Iban,
     // insert new columns above this line
     MaxColumns
   };
